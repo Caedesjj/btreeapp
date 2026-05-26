@@ -1,103 +1,98 @@
 package model;
 
-public class BTree {
-    private Node root;
-    private final int t; // grado mínimo
+/**
+ * Nodo de un árbol B.
+ * 
+ * Un árbol B de grado mínimo 'gradoMinimo' (t) cumple:
+ * - Cada nodo (excepto raíz) tiene al menos t-1 claves.
+ * - Cada nodo tiene como máximo 2t-1 claves.
+ * - Los nodos internos con k claves tienen k+1 hijos.
+ */
+public class NodoB {
+    // Arreglo de claves (números enteros). Tamaño máximo = 2*t -1
+    private int[] claves;
+    // Arreglo de hijos (referencias a otros nodos). Tamaño máximo = 2*t
+    private NodoB[] hijos;
+    // Cantidad actual de claves almacenadas en este nodo
+    private int cantidadClaves;
+    // Si es hoja (true) o nodo interno (false)
+    private boolean esHoja;
 
-    public BTree(int t) {
-        this.t = t;
-        root = new Node(t, true);
+    /**
+     * Constructor.
+     * @param gradoMinimo  t (grado mínimo del árbol B)
+     * @param esHoja       true si el nodo será una hoja
+     */
+    public NodoB(int gradoMinimo, boolean esHoja) {
+        // El máximo de claves es 2t-1
+        this.claves = new int[2 * gradoMinimo - 1];
+        // El máximo de hijos es 2t (porque puede haber 2t hijos cuando está lleno)
+        this.hijos = new NodoB[2 * gradoMinimo];
+        this.cantidadClaves = 0;
+        this.esHoja = esHoja;
     }
 
-    public int getT() { return t; }
-    public Node getRoot() { return root; }
+    // ---------- Métodos getter y setter ----------
+    public int[] getClaves() { return claves; }
+    public NodoB[] getHijos() { return hijos; }
+    public int getCantidadClaves() { return cantidadClaves; }
+    public void setCantidadClaves(int cantidad) { this.cantidadClaves = cantidad; }
+    public boolean esHoja() { return esHoja; }
+    public void setEsHoja(boolean esHoja) { this.esHoja = esHoja; }
 
-    // Insertar clave pública
-    public void insert(int key) {
-        Node r = root;
-        if (r.getKeyCount() == 2 * t - 1) {
-            Node s = new Node(t, false);
-            s.getChildren()[0] = r;
-            splitChild(s, 0, r);
-            root = s;
-            insertNonFull(s, key);
-        } else {
-            insertNonFull(r, key);
-        }
+    /**
+     * Devuelve la clave en una posición dada (índice válido).
+     */
+    public int getClaveEn(int indice) {
+        if (indice >= 0 && indice < cantidadClaves)
+            return claves[indice];
+        return -1; // valor centinela
     }
 
-    // Insertar en nodo no lleno
-    private void insertNonFull(Node node, int key) {
-        int i = node.getKeyCount() - 1;
-
-        if (node.isLeaf()) {
-            node.insertKey(key);
-        } else {
-            // Encontrar hijo adecuado
-            while (i >= 0 && key < node.getKeyAt(i)) {
-                i--;
-            }
-            i++;
-            Node child = node.getChildren()[i];
-            if (child.getKeyCount() == 2 * t - 1) {
-                splitChild(node, i, child);
-                if (key > node.getKeyAt(i)) {
-                    i++;
-                }
-            }
-            insertNonFull(node.getChildren()[i], key);
+    /**
+     * Inserta una clave en orden ascendente dentro del arreglo.
+     * Asume que hay espacio disponible (cantidadClaves < máximo).
+     */
+    public void insertarClave(int clave) {
+        int i = cantidadClaves - 1;
+        // Desplazar claves mayores hacia la derecha
+        while (i >= 0 && claves[i] > clave) {
+            claves[i + 1] = claves[i];
+            i--;
         }
+        claves[i + 1] = clave;
+        cantidadClaves++;
     }
 
-    // Dividir un hijo lleno
-    private void splitChild(Node parent, int index, Node fullChild) {
-        Node newChild = new Node(t, fullChild.isLeaf());
-        int midIndex = t - 1;
-        int median = fullChild.getKeyAt(midIndex);
-
-        // Copiar las claves mayores que la mediana al nuevo hijo
-        int newKeyCount = 0;
-        for (int j = midIndex + 1; j < fullChild.getKeyCount(); j++) {
-            newChild.getKeys()[newKeyCount++] = fullChild.getKeyAt(j);
-        }
-        newChild.setKeyCount(newKeyCount);
-
-        // Copiar los hijos si no es hoja
-        if (!fullChild.isLeaf()) {
-            for (int j = midIndex + 1; j <= fullChild.getKeyCount(); j++) {
-                newChild.getChildren()[j - (midIndex + 1)] = fullChild.getChildren()[j];
-            }
-        }
-
-        // Reducir el hijo original
-        fullChild.setKeyCount(midIndex); // ahora tiene claves 0..midIndex-1
-
-        // Desplazar hijos del padre para hacer espacio
-        for (int j = parent.getKeyCount(); j > index; j--) {
-            parent.getChildren()[j + 1] = parent.getChildren()[j];
-        }
-        parent.getChildren()[index + 1] = newChild;
-
-        // Insertar mediana en el padre
-        parent.insertKey(median);
+    /**
+     * Elimina y devuelve la última clave del nodo (útil para dividir).
+     */
+    public int eliminarUltimaClave() {
+        int ultima = claves[cantidadClaves - 1];
+        cantidadClaves--;
+        return ultima;
     }
 
-    // Búsqueda
-    public boolean search(int key) {
-        return searchRec(root, key);
+    /**
+     * Agrega un hijo en una posición específica, desplazando los demás.
+     */
+    public void agregarHijo(int indice, NodoB hijo) {
+        // Desplazar hijos a la derecha para hacer espacio
+        for (int i = cantidadClaves + 1; i > indice; i--) {
+            hijos[i] = hijos[i - 1];
+        }
+        hijos[indice] = hijo;
     }
 
-    private boolean searchRec(Node node, int key) {
-        int i = 0;
-        while (i < node.getKeyCount() && key > node.getKeyAt(i)) {
-            i++;
+    /**
+     * Elimina y devuelve el hijo en la posición dada.
+     */
+    public NodoB eliminarHijoEn(int indice) {
+        NodoB eliminado = hijos[indice];
+        // Desplazar hijos restantes a la izquierda
+        for (int i = indice; i < cantidadClaves + 1; i++) {
+            hijos[i] = hijos[i + 1];
         }
-        if (i < node.getKeyCount() && key == node.getKeyAt(i)) {
-            return true;
-        }
-        if (node.isLeaf()) {
-            return false;
-        }
-        return searchRec(node.getChildren()[i], key);
+        return eliminado;
     }
 }
