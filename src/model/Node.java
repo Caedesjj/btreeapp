@@ -1,65 +1,98 @@
-package model;
+package btreeapp.modelo;
 
-public class Node {
-    private int[] keys;        // arreglo fijo de claves
-    private Node[] children;   // arreglo fijo de hijos
-    private int keyCount;      // número actual de claves
-    private boolean leaf;
+/**
+ * Nodo de un árbol B.
+ * 
+ * Un árbol B de grado mínimo 'gradoMinimo' (t) cumple:
+ * - Cada nodo (excepto raíz) tiene al menos t-1 claves.
+ * - Cada nodo tiene como máximo 2t-1 claves.
+ * - Los nodos internos con k claves tienen k+1 hijos.
+ */
+public class NodoB {
+    // Arreglo de claves (números enteros). Tamaño máximo = 2*t -1
+    private int[] claves;
+    // Arreglo de hijos (referencias a otros nodos). Tamaño máximo = 2*t
+    private NodoB[] hijos;
+    // Cantidad actual de claves almacenadas en este nodo
+    private int cantidadClaves;
+    // Si es hoja (true) o nodo interno (false)
+    private boolean esHoja;
 
-    public Node(int t, boolean leaf) {
-        this.keys = new int[2 * t - 1];
-        this.children = new Node[2 * t];
-        this.keyCount = 0;
-        this.leaf = leaf;
+    /**
+     * Constructor.
+     * @param gradoMinimo  t (grado mínimo del árbol B)
+     * @param esHoja       true si el nodo será una hoja
+     */
+    public NodoB(int gradoMinimo, boolean esHoja) {
+        // El máximo de claves es 2t-1
+        this.claves = new int[2 * gradoMinimo - 1];
+        // El máximo de hijos es 2t (porque puede haber 2t hijos cuando está lleno)
+        this.hijos = new NodoB[2 * gradoMinimo];
+        this.cantidadClaves = 0;
+        this.esHoja = esHoja;
     }
 
-    // Getters y setters básicos
-    public int[] getKeys() { return keys; }
-    public Node[] getChildren() { return children; }
-    public int getKeyCount() { return keyCount; }
-    public void setKeyCount(int count) { this.keyCount = count; }
-    public boolean isLeaf() { return leaf; }
-    public void setLeaf(boolean leaf) { this.leaf = leaf; }
+    // ---------- Métodos getter y setter ----------
+    public int[] getClaves() { return claves; }
+    public NodoB[] getHijos() { return hijos; }
+    public int getCantidadClaves() { return cantidadClaves; }
+    public void setCantidadClaves(int cantidad) { this.cantidadClaves = cantidad; }
+    public boolean esHoja() { return esHoja; }
+    public void setEsHoja(boolean esHoja) { this.esHoja = esHoja; }
 
-    // Método para insertar una clave en orden (asumiendo que hay espacio)
-    public void insertKey(int key) {
-        int i = keyCount - 1;
-        while (i >= 0 && keys[i] > key) {
-            keys[i + 1] = keys[i];
+    /**
+     * Devuelve la clave en una posición dada (índice válido).
+     */
+    public int getClaveEn(int indice) {
+        if (indice >= 0 && indice < cantidadClaves)
+            return claves[indice];
+        return -1; // valor centinela
+    }
+
+    /**
+     * Inserta una clave en orden ascendente dentro del arreglo.
+     * Asume que hay espacio disponible (cantidadClaves < máximo).
+     */
+    public void insertarClave(int clave) {
+        int i = cantidadClaves - 1;
+        // Desplazar claves mayores hacia la derecha
+        while (i >= 0 && claves[i] > clave) {
+            claves[i + 1] = claves[i];
             i--;
         }
-        keys[i + 1] = key;
-        keyCount++;
+        claves[i + 1] = clave;
+        cantidadClaves++;
     }
 
-    // Eliminar la última clave (útil para split)
-    public int removeLastKey() {
-        int last = keys[keyCount - 1];
-        keyCount--;
-        return last;
+    /**
+     * Elimina y devuelve la última clave del nodo (útil para dividir).
+     */
+    public int eliminarUltimaClave() {
+        int ultima = claves[cantidadClaves - 1];
+        cantidadClaves--;
+        return ultima;
     }
 
-    // Obtener clave en índice
-    public int getKeyAt(int index) {
-        if (index >= 0 && index < keyCount) return keys[index];
-        return -1;
-    }
-
-    // Agregar hijo en posición específica
-    public void addChild(int index, Node child) {
-        // Desplazar hijos a la derecha si es necesario
-        for (int i = keyCount + 1; i > index; i--) {
-            children[i] = children[i - 1];
+    /**
+     * Agrega un hijo en una posición específica, desplazando los demás.
+     */
+    public void agregarHijo(int indice, NodoB hijo) {
+        // Desplazar hijos a la derecha para hacer espacio
+        for (int i = cantidadClaves + 1; i > indice; i--) {
+            hijos[i] = hijos[i - 1];
         }
-        children[index] = child;
+        hijos[indice] = hijo;
     }
 
-    // Eliminar hijo en índice
-    public Node removeChildAt(int index) {
-        Node removed = children[index];
-        for (int i = index; i < keyCount + 1; i++) {
-            children[i] = children[i + 1];
+    /**
+     * Elimina y devuelve el hijo en la posición dada.
+     */
+    public NodoB eliminarHijoEn(int indice) {
+        NodoB eliminado = hijos[indice];
+        // Desplazar hijos restantes a la izquierda
+        for (int i = indice; i < cantidadClaves + 1; i++) {
+            hijos[i] = hijos[i + 1];
         }
-        return removed;
+        return eliminado;
     }
 }
